@@ -6,7 +6,25 @@ import (
 	"strings"
 )
 
-func FirstErr(errs ...error) error {
+// FirstErr return the first err of err and wrapped error
+func FirstErr(err error, wrappedErrs ...interface{}) error {
+	if err != nil {
+		return err
+	}
+
+	for i := range wrappedErrs {
+		if wrapped, ok := wrappedErrs[i].(interface{ Error() error }); ok {
+			return wrapped.Error()
+		}
+		if wrapped, ok := wrappedErrs[i].(interface{ Err() error }); ok {
+			return wrapped.Err()
+		}
+	}
+	return nil
+}
+
+// FirstErrs return the first err of a group of errors
+func FirstErrs(errs ...error) error {
 	for _, err := range errs {
 		if err != nil {
 			return err
@@ -15,6 +33,7 @@ func FirstErr(errs ...error) error {
 	return nil
 }
 
+// MultiErr is a wrap of multi error
 type MultiErr struct {
 	Errs []error
 }
@@ -49,15 +68,7 @@ func (m *MultiErr) Error() string {
 	return strings.TrimSuffix(b.String(), ", ") + "]"
 }
 
-func (m *MultiErr) As(target interface{}) error {
-	for _, err := range m.Errs {
-		if errors.As(err, target) {
-			return err
-		}
-	}
-	return nil
-}
-
+// MergeErr merge multi errors into one
 func MergeErr(errs ...error) error {
 	me := &MultiErr{Errs: make([]error, 0, len(errs))}
 	for _, err := range errs {
@@ -70,4 +81,14 @@ func MergeErr(errs ...error) error {
 		return nil
 	}
 	return me
+}
+
+// As return the error type same as target
+func (m *MultiErr) As(target interface{}) error {
+	for _, err := range m.Errs {
+		if errors.As(err, target) {
+			return err
+		}
+	}
+	return nil
 }

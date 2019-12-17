@@ -2,6 +2,7 @@ package influx
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"sync"
 	"time"
@@ -35,6 +36,36 @@ func InitInfluxDB(addr, user, passwd, database string) (err error) {
 	return
 }
 
+// Ping is the same as client ping
+func Ping(timeout time.Duration) (time.Duration, string, error) {
+	return defaultDB.Client.Ping(timeout)
+}
+
+// SetFlushFlags set buffer flags for batch write on default DB
+func SetFlushFlags(maxFlushCount int, expireTime time.Duration) {
+	defaultDB.SetFlushFlags(maxFlushCount, expireTime)
+}
+
+// Write is a buffer write wrap on default influx db
+func Write(table string, datas ...map[string]interface{}) error {
+	return defaultDB.Write(table, datas...)
+}
+
+// Close flush and close the influxdb default client
+func Close() error {
+	return defaultDB.Close()
+}
+
+// Query is the wrapped query of default db
+func Query(precision, command string, a ...interface{}) (*client.Response, error) {
+	return defaultDB.Query(precision, command, a...)
+}
+
+// QueryAsChunk is the wrapped QueryAsChunk of default db
+func QueryAsChunk(precision, command string, a ...interface{}) (*client.ChunkedResponse, error) {
+	return defaultDB.QueryAsChunk(precision, command, a...)
+}
+
 // ConnectInfluxDB build InfluxDB client
 func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
 	if addr == "" {
@@ -65,7 +96,7 @@ func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
 	}
 
 	resp, err := cli.Query(client.NewQuery("CREATE DATABASE "+database, "", ""))
-	if err := util.FirstErr(err, resp.Error()); err != nil {
+	if err := util.FirstErr(err, resp); err != nil {
 		cli.Close()
 		return nil, err
 	}
@@ -84,20 +115,10 @@ func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
 	}, nil
 }
 
-// SetFlushFlags set buffer flags for batch write on default DB
-func SetFlushFlags(maxFlushCount int, expireTime time.Duration) {
-	defaultDB.SetFlushFlags(maxFlushCount, expireTime)
-}
-
 // SetFlushFlags set buffer flags for batch write
 func (db *DB) SetFlushFlags(maxFlushCount int, expireTime time.Duration) {
 	db.flushCount = maxFlushCount
 	db.flushExpire = expireTime
-}
-
-// Write is a buffer write wrap on default influx db
-func Write(table string, datas ...map[string]interface{}) error {
-	return defaultDB.Write(table, datas...)
 }
 
 // Write is a buffer write wrap
@@ -172,11 +193,6 @@ func (db *DB) writeDaemon() {
 	}()
 }
 
-// Close flush and close the influxdb default client
-func Close() error {
-	return defaultDB.Close()
-}
-
 // Close flush and close the influxdb client
 func (db *DB) Close() error {
 	close(db.closeCh)
@@ -196,12 +212,26 @@ func (db *DB) Close() error {
 	}
 }
 
-func Ping(timeout time.Duration) (time.Duration, string, error) {
-	return defaultDB.Client.Ping(timeout)
-}
-func Query(q client.Query) (*client.Response, error) {
+// Query is the wrapped query
+func (db *DB) Query(precision, command string, a ...interface{}) (*client.Response, error) {
+	q := client.NewQuery(fmt.Sprintf(command, a...), db.database, precision)
 	return defaultDB.Client.Query(q)
 }
-func QueryAsChunk(q client.Query) (*client.ChunkedResponse, error) {
+
+// QueryAsChunk is the wrapped query
+func (db *DB) QueryAsChunk(precision, command string, a ...interface{}) (*client.ChunkedResponse, error) {
+	q := client.NewQuery(fmt.Sprintf(command, a...), db.database, precision)
 	return defaultDB.Client.QueryAsChunk(q)
+}
+
+func RespToKeyPair(resp *client.Response, e error) (keys []string, vals [][]interface{}, err error) {
+	if err = util.FirstErr(e, resp); err != nil {
+		return nil, nil, err
+	} else if count := len(resp.Results); count != 1 {
+		return nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
+	} else if count := len(resp.Results[0].Series); count != 1 {
+		return nil, nil, fmt.Errorf("influx return series should be 1 but not %d", count)
+	}
+
+	return resp.Results[0].Series[0].Columns, resp.Results[0].Series[0].Values, nil
 }

@@ -80,6 +80,9 @@ func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
 	if passwd == "" {
 		passwd = os.Getenv("INFLUX_PASSWD")
 	}
+	if database == "" {
+		database = os.Getenv("INFLUX_DATABASE")
+	}
 
 	cli, err := client.NewHTTPClient(client.HTTPConfig{
 		Addr:     addr,

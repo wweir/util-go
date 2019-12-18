@@ -52,8 +52,13 @@ func ConnectMySQL(dsn string) (*MySQL, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	_, err = db.ExecContext(ctx, "CREATE DATABASE ? IF NOT EXISTS", conf.DBName)
-	return &MySQL{DB: db}, err
+
+	_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+conf.DBName)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	return &MySQL{DB: db}, nil
 }
 
 // Tx run functions in default DB with transaction

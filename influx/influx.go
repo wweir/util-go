@@ -30,6 +30,11 @@ type DB struct {
 
 var defaultDB *DB
 
+// Client return the raw Client of influxdata
+func Client() client.Client {
+	return defaultDB.Client
+}
+
 // InitInfluxDB build InfluxDB client and set the default database
 func InitInfluxDB(addr, user, passwd, database string) (err error) {
 	defaultDB, err = ConnectInfluxDB(addr, user, passwd, database)

@@ -17,6 +17,11 @@ type MySQL struct {
 
 var defaultDB *MySQL
 
+// DB return the raw DB of sqlx
+func DB() *sqlx.DB {
+	return defaultDB.DB
+}
+
 // InitMySQL set the default sql db for transaction
 func InitMySQL(dsn string) (err error) {
 	defaultDB, err = ConnectMySQL(dsn)

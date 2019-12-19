@@ -52,21 +52,33 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 
 	db, err := sqlx.Open("mysql", conf.FormatDSN())
 	if err != nil {
-		return nil, err
+		dbName = conf.DBName
+		conf.DBName = "mysql"
+		if db, err = sqlx.Open("mysql", conf.FormatDSN()); err != nil {
+			return nil, err
+		}
+
+		// create database if not open fail with the database: dbName
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+
+		_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+conf.DBName)
+		if err != nil {
+			db.Close()
+			return nil, err
+		}
+		db.Close()
+
+		conf.DBName = dbName
+		if db, err = sqlx.Open("mysql", conf.FormatDSN()); err != nil {
+			return nil, err
+		}
 	}
 
 	db.SetMaxIdleConns(2)
 	db.SetMaxOpenConns(20)
 	db.SetConnMaxLifetime(time.Minute)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
-	_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+conf.DBName)
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
 	return &MySQL{DB: db}, nil
 }
 

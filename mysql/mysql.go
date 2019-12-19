@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql" // MySQL driver
@@ -23,25 +24,33 @@ func DB() *sqlx.DB {
 }
 
 // InitMySQL set the default sql db for transaction
-func InitMySQL(dsn string) (err error) {
-	defaultDB, err = ConnectMySQL(dsn)
+func InitMySQL(dsn, dbName string) (err error) {
+	defaultDB, err = ConnectMySQL(dsn, dbName)
 	return
 }
 
 // ConnectMySQL connect to a MySQL database
-func ConnectMySQL(dsn string) (*MySQL, error) {
+func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 	if dsn == "" {
 		dsn = os.Getenv("MYSQL_DSN")
 	}
 	if dsn == "" {
 		return nil, errors.New("please set dsn by env MYSQL_DSN or manually setting")
 	}
+
+	if strings.IndexByte(dsn, '/') == -1 {
+		dsn += "/" + dbName
+	}
 	conf, err := mysql.ParseDSN(dsn)
 	if err != nil {
 		return nil, err
 	}
+	conf.ParseTime = true
+	if dbName != "" {
+		conf.DBName = dbName
+	}
 
-	db, err := sqlx.Open("mysql", dsn)
+	db, err := sqlx.Open("mysql", conf.FormatDSN())
 	if err != nil {
 		return nil, err
 	}

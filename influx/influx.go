@@ -15,7 +15,6 @@ import (
 type DB struct {
 	client.Client
 	database string
-	tags     map[string]string
 
 	count       int
 	flushCount  int           // default 512
@@ -52,8 +51,8 @@ func SetFlushFlags(maxFlushCount int, expireTime time.Duration) {
 }
 
 // Write is a buffer write wrap on default influx db
-func Write(table string, datas ...map[string]interface{}) error {
-	return defaultDB.Write(table, datas...)
+func Write(table string, tags map[string]string, datas ...map[string]interface{}) error {
+	return defaultDB.Write(table, tags, datas...)
 }
 
 // Close flush and close the influxdb default client
@@ -112,7 +111,6 @@ func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
 	return &DB{
 		Client:   cli,
 		database: database,
-		tags:     map[string]string{},
 
 		flushCount:  512,
 		flushExpire: 200 * time.Millisecond,
@@ -130,7 +128,7 @@ func (db *DB) SetFlushFlags(maxFlushCount int, expireTime time.Duration) {
 }
 
 // Write is a buffer write wrap
-func (db *DB) Write(table string, datas ...map[string]interface{}) error {
+func (db *DB) Write(table string, tags map[string]string, datas ...map[string]interface{}) error {
 	// Start the daemon goroutine
 	db.once.Do(db.writeDaemon)
 
@@ -142,7 +140,7 @@ func (db *DB) Write(table string, datas ...map[string]interface{}) error {
 
 	db.wg.Add(1)
 	for _, data := range datas {
-		point, err := client.NewPoint(table, db.tags, data, time.Now())
+		point, err := client.NewPoint(table, tags, data, time.Now())
 		if err != nil {
 			return err
 		}
@@ -232,14 +230,15 @@ func (db *DB) QueryAsChunk(precision, command string, a ...interface{}) (*client
 	return defaultDB.Client.QueryAsChunk(q)
 }
 
-func RespToKeyPair(resp *client.Response, e error) (keys []string, vals [][]interface{}, err error) {
+// RespToKeyPair turn responce into record
+func RespToKeyPair(resp *client.Response, e error) (tags map[string]string, keys []string, vals [][]interface{}, err error) {
 	if err = util.FirstErr(e, resp); err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	} else if count := len(resp.Results); count != 1 {
-		return nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
+		return nil, nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
 	} else if count := len(resp.Results[0].Series); count != 1 {
-		return nil, nil, fmt.Errorf("influx return series should be 1 but not %d", count)
+		return nil, nil, nil, fmt.Errorf("influx return series should be 1 but not %d", count)
 	}
 
-	return resp.Results[0].Series[0].Columns, resp.Results[0].Series[0].Values, nil
+	return resp.Results[0].Series[0].Tags, resp.Results[0].Series[0].Columns, resp.Results[0].Series[0].Values, nil
 }

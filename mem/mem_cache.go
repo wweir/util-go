@@ -12,7 +12,7 @@ import (
 
 // CacheType define the type which can speed up by mem cache
 type CacheType interface {
-	GetOne(key interface{}) (interface{}, error)
+	Get(key interface{}) error
 }
 
 // Cache is the definition of cache, be careful of the memory usage
@@ -106,16 +106,16 @@ func (c *Cache) Remember(dst CacheType, key interface{}) error {
 	}
 
 	// Third: getting data from CacheType, maybe from db
-	val, err := dst.GetOne(key)
+	err := dst.Get(key)
 	if err != nil {
 		c.barrier.Store(cacheKey, err)
 		return err
 	}
 
-	c.now.Store(cacheKey, val)
+	c.now.Store(cacheKey, dst)
 	close(ch) // broadcast, wakeup all waiting groutine
 
-	return deepcopier.Copy(val).To(dst)
+	return nil
 }
 
 // Delete immediately specified the cached content to expire

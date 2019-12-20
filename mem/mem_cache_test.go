@@ -12,14 +12,13 @@ type testType struct {
 	Test string
 }
 
-func (t *testType) GetOne(key interface{}) (interface{}, error) {
-	var str string
+func (t *testType) Get(key interface{}) error {
 	var ok bool
-	if str, ok = key.(string); !ok {
-		return nil, errors.New("type not match")
+	if t.Test, ok = key.(string); !ok {
+		return errors.New("type not match")
 	}
 	log.Println("from db")
-	return &testType{str}, nil
+	return nil
 }
 
 func TestRemember(t *testing.T) {

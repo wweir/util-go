@@ -237,7 +237,7 @@ func RespToKeyPair(resp *client.Response, e error) (tags map[string]string, keys
 	} else if count := len(resp.Results); count != 1 {
 		return nil, nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
 	} else if count := len(resp.Results[0].Series); count != 1 {
-		return nil, nil, nil, fmt.Errorf("influx return series should be 1 but not %d", count)
+		return nil, nil, nil, fmt.Errorf("no series exist")
 	}
 
 	return resp.Results[0].Series[0].Tags, resp.Results[0].Series[0].Columns, resp.Results[0].Series[0].Values, nil

@@ -8,9 +8,10 @@ import (
 )
 
 var sugar *zap.SugaredLogger
+var cfg zap.Config
 
 func init() {
-	cfg := zap.NewProductionConfig()
+	cfg = zap.NewProductionConfig()
 	cfg.Encoding = "console"
 	cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(t.Format("01-02 15:04:05Z07"))
@@ -26,8 +27,9 @@ func init() {
 	sugar = logger.Sugar()
 }
 
-func Desugar() *zap.Logger {
-	return sugar.Desugar()
+func Logger() *zap.Logger {
+	logger, _ := cfg.Build()
+	return logger
 }
 
 func Errorf(template string, args ...interface{}) {

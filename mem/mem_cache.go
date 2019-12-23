@@ -65,11 +65,9 @@ func (c *Cache) Remember(dst CacheType, key interface{}) error {
 	// just an atomic action, do not care the performance
 	select {
 	case <-c.rotate:
-		c.rwmutex.Lock()
 		c.old = c.now
 		c.now = &sync.Map{}
 		c.barrier = &sync.Map{}
-		c.rwmutex.Unlock()
 	default:
 	}
 

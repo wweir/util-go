@@ -16,10 +16,8 @@ func init() {
 	cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(t.Format("01-02 15:04:05Z07"))
 	}
+	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	cfg.EncoderConfig.EncodeDuration = nil
-	cfg.EncoderConfig.EncodeLevel = func(l zapcore.Level, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(l.CapitalString()[:1])
-	}
 	cfg.EncoderConfig.EncodeCaller = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(caller.TrimmedPath())
 	}

@@ -1,6 +1,7 @@
 package log
 
 import (
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,9 +25,12 @@ func init() {
 	logger, _ := cfg.Build(zap.AddCallerSkip(1))
 	sugar = logger.Sugar()
 }
+func SqlLog(template string, args ...interface{}) {
+	sugar.Infof(strings.ReplaceAll(template, "?", "%v"), args...)
+}
 
-func Logger() *zap.Logger {
-	logger, _ := cfg.Build()
+func Logger(skip int) *zap.Logger {
+	logger, _ := cfg.Build(zap.AddCallerSkip(skip))
 	return logger
 }
 

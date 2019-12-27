@@ -38,6 +38,7 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 		return nil, errors.New("please set dsn by env MYSQL_DSN or manually setting")
 	}
 
+	dsn = strings.TrimPrefix(dsn, "mysql://")
 	if strings.IndexByte(dsn, '/') == -1 {
 		dsn += "/" + dbName
 	}
@@ -52,6 +53,9 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 
 	db, err := sqlx.Open("mysql", conf.FormatDSN())
 	if err != nil {
+		return nil, err
+	}
+	if err := db.Ping(); err != nil {
 		dbName = conf.DBName
 		conf.DBName = "mysql"
 		if db, err = sqlx.Open("mysql", conf.FormatDSN()); err != nil {
@@ -62,7 +66,7 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 
-		_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+conf.DBName)
+		_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+dbName)
 		if err != nil {
 			db.Close()
 			return nil, err

@@ -230,15 +230,26 @@ func (db *DB) QueryAsChunk(precision, command string, a ...interface{}) (*client
 	return defaultDB.Client.QueryAsChunk(q)
 }
 
-// RespToKeyPair turn responce into record
-func RespToKeyPair(resp *client.Response, e error) (tags map[string]string, keys []string, vals [][]interface{}, err error) {
+// RespToRecords turn responce into records
+func RespToRecords(resp *client.Response, e error) (tags map[string]string, records []map[string]interface{}, err error) {
 	if err = util.FirstErr(e, resp); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	} else if count := len(resp.Results); count != 1 {
-		return nil, nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
+		return nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
 	} else if count := len(resp.Results[0].Series); count != 1 {
-		return nil, nil, nil, fmt.Errorf("no series exist")
+		return nil, nil, fmt.Errorf("no record found")
 	}
 
-	return resp.Results[0].Series[0].Tags, resp.Results[0].Series[0].Columns, resp.Results[0].Series[0].Values, nil
+	keys := resp.Results[0].Series[0].Columns
+	vals := resp.Results[0].Series[0].Values
+	records = make([]map[string]interface{}, 0, len(vals[0]))
+	for recordIdx := 0; recordIdx < len(vals); recordIdx++ {
+		record := map[string]interface{}{}
+		for fieldIdx := range keys {
+			record[keys[fieldIdx]] = vals[recordIdx][fieldIdx]
+		}
+		records = append(records, record)
+	}
+
+	return resp.Results[0].Series[0].Tags, records, nil
 }

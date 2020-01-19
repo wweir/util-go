@@ -236,19 +236,21 @@ func RespToRecords(resp *client.Response, e error) (tags map[string]string, reco
 		return nil, nil, err
 	} else if count := len(resp.Results); count != 1 {
 		return nil, nil, fmt.Errorf("influx return results should be 1 but not %d", count)
-	} else if count := len(resp.Results[0].Series); count != 1 {
+	} else if count := len(resp.Results[0].Series); count == 0 {
 		return nil, nil, fmt.Errorf("no record found")
 	}
 
-	keys := resp.Results[0].Series[0].Columns
-	vals := resp.Results[0].Series[0].Values
-	records = make([]map[string]interface{}, 0, len(vals[0]))
-	for recordIdx := 0; recordIdx < len(vals); recordIdx++ {
-		record := map[string]interface{}{}
-		for fieldIdx := range keys {
-			record[keys[fieldIdx]] = vals[recordIdx][fieldIdx]
+	for _, serie := range resp.Results[0].Series {
+		keys := serie.Columns
+		vals := serie.Values
+		records = make([]map[string]interface{}, 0, len(vals[0]))
+		for recordIdx := 0; recordIdx < len(vals); recordIdx++ {
+			record := map[string]interface{}{}
+			for fieldIdx := range keys {
+				record[keys[fieldIdx]] = vals[recordIdx][fieldIdx]
+			}
+			records = append(records, record)
 		}
-		records = append(records, record)
 	}
 
 	return resp.Results[0].Series[0].Tags, records, nil

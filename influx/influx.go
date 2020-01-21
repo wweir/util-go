@@ -229,34 +229,3 @@ func (db *DB) QueryAsChunk(precision, command string, a ...interface{}) (*client
 	q := client.NewQuery(fmt.Sprintf(command, a...), db.database, precision)
 	return defaultDB.Client.QueryAsChunk(q)
 }
-
-type Record struct {
-	Tag map[string]string
-	Row map[string]interface{}
-}
-
-// RespToRecords turn responce into records
-func RespToRecords(resp *client.Response, e error) ([]*Record, error) {
-	if err := util.FirstErr(e, resp); err != nil {
-		return nil, err
-	} else if count := len(resp.Results); count != 1 {
-		return nil, fmt.Errorf("influx return results should be 1 but not %d", count)
-	} else if count := len(resp.Results[0].Series); count == 0 {
-		return nil, fmt.Errorf("no record found")
-	}
-
-	records := []*Record{}
-	for _, serie := range resp.Results[0].Series {
-		keys := serie.Columns
-		vals := serie.Values
-		record := &Record{Tag: serie.Tags, Row: map[string]interface{}{}}
-		for recordIdx := 0; recordIdx < len(vals); recordIdx++ {
-			for fieldIdx := range keys {
-				record.Row[keys[fieldIdx]] = vals[recordIdx][fieldIdx]
-			}
-		}
-		records = append(records, record)
-	}
-
-	return records, nil
-}

@@ -15,7 +15,7 @@ func init() {
 	cfg = zap.NewProductionConfig()
 	cfg.Encoding = "console"
 	cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("01-02 15:04:05Z07"))
+		enc.AppendString(t.Format("2006-01-02 15:04:05Z07"))
 	}
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	cfg.EncoderConfig.EncodeDuration = nil

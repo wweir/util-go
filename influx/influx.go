@@ -139,6 +139,7 @@ func (db *DB) Write(table string, tags map[string]string, datas ...map[string]in
 	}
 
 	db.wg.Add(1)
+	defer db.wg.Done()
 	for _, data := range datas {
 		point, err := client.NewPoint(table, tags, data, time.Now())
 		if err != nil {
@@ -147,7 +148,6 @@ func (db *DB) Write(table string, tags map[string]string, datas ...map[string]in
 
 		db.pointCh <- point
 	}
-	db.wg.Done()
 
 	// return err while write
 	select {

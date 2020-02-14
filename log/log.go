@@ -1,6 +1,8 @@
 package log
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -34,33 +36,53 @@ func Logger(skip int) *zap.Logger {
 	return logger
 }
 
-func Errorf(template string, args ...interface{}) {
-	sugar.Errorf(template, args...)
+func Errorf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	sugar.Fatalf(msg)
+	return errors.New(msg)
 }
 func Errorw(msg string, keysAndValues ...interface{}) {
 	sugar.Errorw(msg, keysAndValues...)
 }
-func Fatalf(template string, args ...interface{}) {
-	sugar.Fatalf(template, args...)
+func Fatalf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	sugar.Fatalf(msg)
+	return errors.New(msg)
 }
 func Fatalw(msg string, keysAndValues ...interface{}) {
 	sugar.Fatalw(msg, keysAndValues...)
 }
-func Infof(template string, args ...interface{}) {
-	sugar.Infof(template, args...)
+func Infof(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	sugar.Infof(msg)
+	return errors.New(msg)
 }
 func Infow(msg string, keysAndValues ...interface{}) {
 	sugar.Infow(msg, keysAndValues...)
 }
-func Panicf(template string, args ...interface{}) {
-	sugar.Panicf(template, args...)
+func Panicf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	sugar.Panicf(msg)
+	return errors.New(msg)
 }
 func Panicw(msg string, keysAndValues ...interface{}) {
 	sugar.Panicw(msg, keysAndValues...)
 }
-func Warnf(template string, args ...interface{}) {
-	sugar.Warnf(template, args...)
+func Warnf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	sugar.Warnf(msg)
+	return errors.New(msg)
 }
 func Warnw(msg string, keysAndValues ...interface{}) {
 	sugar.Warnw(msg, keysAndValues...)
+}
+
+func fmtMsg(template string, args ...interface{}) string {
+	if template == "" && len(args) > 0 {
+		return fmt.Sprint(args...)
+	} else if template != "" && len(args) > 0 {
+		return fmt.Sprintf(template, args...)
+	} else {
+		return template
+	}
 }

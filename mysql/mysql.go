@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql" // MySQL driver
@@ -24,13 +23,13 @@ func DB() *sqlx.DB {
 }
 
 // InitMySQL set the default sql db for transaction
-func InitMySQL(dsn, dbName string) (err error) {
-	defaultDB, err = ConnectMySQL(dsn, dbName)
+func InitMySQL(dsn string) (err error) {
+	defaultDB, err = ConnectMySQL(dsn)
 	return
 }
 
 // ConnectMySQL connect to a MySQL database
-func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
+func ConnectMySQL(dsn string) (*MySQL, error) {
 	if dsn == "" {
 		dsn = os.Getenv("MYSQL_DSN")
 	}
@@ -38,32 +37,28 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 		return nil, errors.New("please set dsn by env MYSQL_DSN or manually setting")
 	}
 
-	dsn = strings.TrimPrefix(dsn, "mysql://")
-	if strings.IndexByte(dsn, '/') == -1 {
-		dsn += "/" + dbName
+	db, err := sqlx.Open("mysql", dsn)
+	if err == nil {
+		err = db.Ping()
 	}
-	conf, err := mysql.ParseDSN(dsn)
 	if err != nil {
-		return nil, err
-	}
-	conf.ParseTime = true
-	if dbName != "" {
-		conf.DBName = dbName
-	}
+		conf, e := mysql.ParseDSN(dsn)
+		if e != nil {
+			return nil, e
+		} else if conf.DBName == "" {
+			return nil, err
+		}
 
-	db, err := sqlx.Open("mysql", conf.FormatDSN())
-	if err != nil {
-		return nil, err
-	}
-	if err := db.Ping(); err != nil {
-		dbName = conf.DBName
-		conf.DBName = "mysql"
+		var dbName string
+		var params map[string]string
+		dbName, conf.DBName = conf.DBName, ""
+		params, conf.Params = conf.Params, map[string]string{}
 		if db, err = sqlx.Open("mysql", conf.FormatDSN()); err != nil {
 			return nil, err
 		}
 
 		// create database if not open fail with the database: dbName
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
 		_, err = db.ExecContext(ctx, "CREATE DATABASE IF NOT EXISTS "+dbName)
@@ -74,15 +69,17 @@ func ConnectMySQL(dsn, dbName string) (*MySQL, error) {
 		db.Close()
 
 		conf.DBName = dbName
+		conf.Params = params
 		if db, err = sqlx.Open("mysql", conf.FormatDSN()); err != nil {
+			return nil, err
+		}
+		if err = db.Ping(); err != nil {
 			return nil, err
 		}
 	}
 
-	db.SetMaxIdleConns(2)
-	db.SetMaxOpenConns(20)
-	db.SetConnMaxLifetime(time.Minute)
-
+	db.SetMaxOpenConns(256)
+	db.SetConnMaxLifetime(20 * time.Second)
 	return &MySQL{DB: db}, nil
 }
 

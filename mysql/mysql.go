@@ -84,19 +84,19 @@ func ConnectMySQL(dsn string) (*MySQL, error) {
 }
 
 // Tx run functions in default DB with transaction
-func Tx(ctx context.Context, fns ...func(ctx context.Context, tx *sqlx.Tx) (err error)) error {
+func Tx(ctx context.Context, fns ...func(tx *sqlx.Tx) (err error)) error {
 	return defaultDB.Tx(ctx, fns...)
 }
 
 // Tx run functions with transaction
-func (db *MySQL) Tx(ctx context.Context, fns ...func(ctx context.Context, tx *sqlx.Tx) (err error)) error {
+func (db *MySQL) Tx(ctx context.Context, fns ...func(tx *sqlx.Tx) (err error)) error {
 	tx, err := db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}
 
 	for _, fn := range fns {
-		if err := fn(ctx, tx); err != nil {
+		if err := fn(tx); err != nil {
 			tx.Rollback()
 			return err
 		}

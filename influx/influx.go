@@ -8,7 +8,7 @@ import (
 	"time"
 
 	client "github.com/influxdata/influxdb/client/v2"
-	"github.com/wweir/utils/util"
+	util "github.com/wweir/utils"
 )
 
 // DB is a influxdb client wrap

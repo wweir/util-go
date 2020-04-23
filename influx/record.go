@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	client "github.com/influxdata/influxdb/client/v2"
-	"github.com/wweir/utils/util"
+	util "github.com/wweir/utils"
 )
 
 type Record struct {

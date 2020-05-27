@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var sugar *zap.SugaredLogger
+var Sugar *zap.SugaredLogger
 var cfg zap.Config
 
 func init() {
@@ -25,10 +25,7 @@ func init() {
 		enc.AppendString(caller.TrimmedPath())
 	}
 	logger, _ := cfg.Build(zap.AddCallerSkip(1))
-	sugar = logger.Sugar()
-}
-func SqlLog(template string, args ...interface{}) {
-	sugar.Infof(strings.ReplaceAll(template, "?", "%v"), args...)
+	Sugar = logger.Sugar()
 }
 
 func Logger(skip int) *zap.Logger {
@@ -36,45 +33,64 @@ func Logger(skip int) *zap.Logger {
 	return logger
 }
 
-func Errorf(template string, args ...interface{}) error {
-	msg := fmtMsg(template, args...)
-	sugar.Errorf(msg)
-	return errors.New(msg)
+func SqlLog(template string, args ...interface{}) {
+	Sugar.Infof(strings.ReplaceAll(template, "?", "%v"), args...)
 }
-func Errorw(msg string, keysAndValues ...interface{}) {
-	sugar.Errorw(msg, keysAndValues...)
-}
-func Fatalf(template string, args ...interface{}) error {
-	msg := fmtMsg(template, args...)
-	sugar.Fatalf(msg)
-	return errors.New(msg)
-}
-func Fatalw(msg string, keysAndValues ...interface{}) {
-	sugar.Fatalw(msg, keysAndValues...)
-}
+
 func Infof(template string, args ...interface{}) error {
 	msg := fmtMsg(template, args...)
-	sugar.Infof(msg)
+	Sugar.Infof(msg)
 	return errors.New(msg)
 }
 func Infow(msg string, keysAndValues ...interface{}) {
-	sugar.Infow(msg, keysAndValues...)
+	Sugar.Infow(msg, keysAndValues...)
 }
-func Panicf(template string, args ...interface{}) error {
-	msg := fmtMsg(template, args...)
-	sugar.Panicf(msg)
-	return errors.New(msg)
+func Infoc(err error, msg string, keysAndValues ...interface{}) {
+	if err != nil {
+		Sugar.Infow(msg, keysAndValues...)
+	}
 }
-func Panicw(msg string, keysAndValues ...interface{}) {
-	sugar.Panicw(msg, keysAndValues...)
-}
+
 func Warnf(template string, args ...interface{}) error {
 	msg := fmtMsg(template, args...)
-	sugar.Warnf(msg)
+	Sugar.Warnf(msg)
 	return errors.New(msg)
 }
 func Warnw(msg string, keysAndValues ...interface{}) {
-	sugar.Warnw(msg, keysAndValues...)
+	Sugar.Warnw(msg, keysAndValues...)
+}
+func Warnc(err error, msg string, keysAndValues ...interface{}) {
+	if err != nil {
+		Sugar.Warnw(msg, keysAndValues...)
+	}
+}
+
+func Errorf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	Sugar.Errorf(msg)
+	return errors.New(msg)
+}
+func Errorw(msg string, keysAndValues ...interface{}) {
+	Sugar.Errorw(msg, keysAndValues...)
+}
+func Errorc(err error, msg string, keysAndValues ...interface{}) {
+	if err != nil {
+		Sugar.Errorw(msg, keysAndValues...)
+	}
+}
+
+func Fatalf(template string, args ...interface{}) error {
+	msg := fmtMsg(template, args...)
+	Sugar.Fatalf(msg)
+	return errors.New(msg)
+}
+func Fatalw(msg string, keysAndValues ...interface{}) {
+	Sugar.Fatalw(msg, keysAndValues...)
+}
+func Fatalc(err error, msg string, keysAndValues ...interface{}) {
+	if err != nil {
+		Sugar.Fatalw(msg, keysAndValues...)
+	}
 }
 
 func fmtMsg(template string, args ...interface{}) string {

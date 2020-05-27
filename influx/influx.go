@@ -8,7 +8,7 @@ import (
 	"time"
 
 	client "github.com/influxdata/influxdb/client/v2"
-	util "github.com/wweir/utils"
+	"github.com/wweir/util-go"
 )
 
 // DB is a influxdb client wrap
@@ -167,12 +167,12 @@ func (db *DB) newBatchPoint() client.BatchPoints {
 
 func (db *DB) writeDaemon() {
 	go func() {
-		tick := time.Tick(db.flushExpire)
+		tick := time.NewTicker(db.flushExpire)
 		bp := db.newBatchPoint()
 
 		for {
 			select {
-			case <-tick:
+			case <-tick.C:
 			case point, ok := <-db.pointCh:
 				if ok {
 					bp.AddPoint(point)

@@ -5,7 +5,7 @@ import (
 	"log"
 	"testing"
 
-	"github.com/wweir/utils/mem"
+	"github.com/wweir/util-go/mem"
 )
 
 type testType struct {

@@ -3,7 +3,6 @@ package mysql
 import (
 	"context"
 	"errors"
-	"os"
 	"time"
 
 	"github.com/go-sql-driver/mysql" // MySQL driver
@@ -31,10 +30,7 @@ func InitMySQL(dsn string) (err error) {
 // ConnectMySQL connect to a MySQL database
 func ConnectMySQL(dsn string) (*MySQL, error) {
 	if dsn == "" {
-		dsn = os.Getenv("MYSQL_DSN")
-	}
-	if dsn == "" {
-		return nil, errors.New("please set dsn by env MYSQL_DSN or manually setting")
+		return nil, errors.New("please set dsn")
 	}
 
 	db, err := sqlx.Open("mysql", dsn)

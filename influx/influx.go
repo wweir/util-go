@@ -3,7 +3,6 @@ package influx
 import (
 	"errors"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -72,20 +71,15 @@ func QueryAsChunk(precision, command string, a ...interface{}) (*client.ChunkedR
 
 // ConnectInfluxDB build InfluxDB client
 func ConnectInfluxDB(addr, user, passwd, database string) (*DB, error) {
-	if addr == "" {
-		addr = os.Getenv("INFLUX_ADDR")
-	}
-	if addr == "" {
-		return nil, errors.New("please set endpoint by env INFLUX_ADDR or manually setting")
-	}
-	if user == "" {
-		user = os.Getenv("INFLUX_USER")
-	}
-	if passwd == "" {
-		passwd = os.Getenv("INFLUX_PASSWD")
-	}
-	if database == "" {
-		database = os.Getenv("INFLUX_DATABASE")
+	switch {
+	case addr == "":
+		return nil, errors.New("please set addr")
+	case user == "":
+		return nil, errors.New("please set user")
+	case passwd == "":
+		return nil, errors.New("please set passwd")
+	case database == "":
+		return nil, errors.New("please set database")
 	}
 
 	cli, err := client.NewHTTPClient(client.HTTPConfig{

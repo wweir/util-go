@@ -14,14 +14,14 @@ func init() {
 	Cfg = zap.NewProductionConfig()
 	Cfg.Encoding = "console"
 	Cfg.EncoderConfig.EncodeTime = func(t time.Time, enc zapcore.PrimitiveArrayEncoder) {
-		enc.AppendString(t.Format("01/02 15:04:05.000Z07"))
+		enc.AppendString(t.Format("01-02 15:04:05.000Z07"))
 	}
 	Cfg.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	Cfg.EncoderConfig.EncodeDuration = nil
 	Cfg.EncoderConfig.EncodeCaller = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(caller.TrimmedPath())
 	}
-	logger, _ := Cfg.Build(zap.AddCaller())
+	logger, _ := Cfg.Build(zap.AddCallerSkip(1))
 	Sugar = logger.Sugar()
 }
 
@@ -44,6 +44,8 @@ func (*nopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
 func (*nopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
 func (*nopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
 
+// Check will log the message if err not nil, eg:
+// defer log.Check(err).Wranw("XXX", "err", err)
 func Check(err error) logger {
 	if err == nil {
 		return &nopLogger{}
@@ -59,6 +61,9 @@ func Warnw(msg string, keysAndValues ...interface{}) {
 }
 func Errorw(msg string, keysAndValues ...interface{}) {
 	Sugar.Errorw(msg, keysAndValues...)
+}
+func Panicw(msg string, keysAndValues ...interface{}) {
+	Sugar.Panicw(msg, keysAndValues...)
 }
 func Fatalw(msg string, keysAndValues ...interface{}) {
 	Sugar.Fatalw(msg, keysAndValues...)

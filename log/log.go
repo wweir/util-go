@@ -43,23 +43,33 @@ func (*nopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
 func (*nopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
 
 var (
-	checkOnce  sync.Once
-	checkSugar *zap.SugaredLogger
-	checkInit  = func() {
-		checkSugar = Logger().Sugar()
+	errOnce  sync.Once
+	errSugar *zap.SugaredLogger
+	errInit  = func() {
+		errSugar = Logger().Sugar()
 	}
 )
 
-// Check will log the message if err not nil, eg:
-// defer log.Check(err).Wranw("XXX", "err", err)
-func Check(err error) logger {
-	checkOnce.Do(checkInit)
+// NotNil will log the message if err not nil, eg:
+// defer log.NotNil(err).Wranw("XXX", "err", err)
+func NotNil(err error) logger {
+	errOnce.Do(errInit)
 
-	if err == nil {
-		return &nopLogger{}
+	if err != nil {
+		return errSugar
 	}
+	return &nopLogger{}
+}
 
-	return checkSugar
+// Check will log the message if should log is true, eg:
+// defer log.Check(errors.As(err, xxx)).Errorw("XXX", "err", err)
+func Check(shouldLog bool) logger {
+	errOnce.Do(errInit)
+
+	if shouldLog {
+		return errSugar
+	}
+	return &nopLogger{}
 }
 
 var (

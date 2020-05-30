@@ -1,13 +1,13 @@
 package log
 
 import (
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var Sugar *zap.SugaredLogger
 var Cfg zap.Config
 
 func init() {
@@ -21,8 +21,6 @@ func init() {
 	Cfg.EncoderConfig.EncodeCaller = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(caller.TrimmedPath())
 	}
-	logger, _ := Cfg.Build(zap.AddCallerSkip(1))
-	Sugar = logger.Sugar()
 }
 
 func Logger(opts ...zap.Option) *zap.Logger {
@@ -44,27 +42,51 @@ func (*nopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
 func (*nopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
 func (*nopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
 
+var (
+	checkOnce  sync.Once
+	checkSugar *zap.SugaredLogger
+	checkInit  = func() {
+		checkSugar = Logger().Sugar()
+	}
+)
+
 // Check will log the message if err not nil, eg:
 // defer log.Check(err).Wranw("XXX", "err", err)
 func Check(err error) logger {
+	checkOnce.Do(checkInit)
+
 	if err == nil {
 		return &nopLogger{}
 	}
-	return Sugar
+
+	return checkSugar
 }
 
+var (
+	defaultOnce  sync.Once
+	defaultSugar *zap.SugaredLogger
+	defaultInit  = func() {
+		defaultSugar = Logger(zap.AddCallerSkip(1)).Sugar()
+	}
+)
+
 func Infow(msg string, keysAndValues ...interface{}) {
-	Sugar.Infow(msg, keysAndValues...)
+	defaultOnce.Do(defaultInit)
+	defaultSugar.Infow(msg, keysAndValues...)
 }
 func Warnw(msg string, keysAndValues ...interface{}) {
-	Sugar.Warnw(msg, keysAndValues...)
+	defaultOnce.Do(defaultInit)
+	defaultSugar.Warnw(msg, keysAndValues...)
 }
 func Errorw(msg string, keysAndValues ...interface{}) {
-	Sugar.Errorw(msg, keysAndValues...)
+	defaultOnce.Do(defaultInit)
+	defaultSugar.Errorw(msg, keysAndValues...)
 }
 func Panicw(msg string, keysAndValues ...interface{}) {
-	Sugar.Panicw(msg, keysAndValues...)
+	defaultOnce.Do(defaultInit)
+	defaultSugar.Panicw(msg, keysAndValues...)
 }
 func Fatalw(msg string, keysAndValues ...interface{}) {
-	Sugar.Fatalw(msg, keysAndValues...)
+	defaultOnce.Do(defaultInit)
+	defaultSugar.Fatalw(msg, keysAndValues...)
 }

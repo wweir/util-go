@@ -1,7 +1,6 @@
 package log
 
 import (
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -9,6 +8,7 @@ import (
 )
 
 var Cfg zap.Config
+var defaultSugar *zap.SugaredLogger
 
 func init() {
 	Cfg = zap.NewProductionConfig()
@@ -21,6 +21,8 @@ func init() {
 	Cfg.EncoderConfig.EncodeCaller = func(caller zapcore.EntryCaller, enc zapcore.PrimitiveArrayEncoder) {
 		enc.AppendString(caller.TrimmedPath())
 	}
+
+	defaultSugar = Logger(zap.AddCallerSkip(1)).Sugar()
 }
 
 func Logger(opts ...zap.Option) *zap.Logger {
@@ -28,11 +30,34 @@ func Logger(opts ...zap.Option) *zap.Logger {
 	return logger
 }
 
+func Infow(msg string, keysAndValues ...interface{}) {
+	defaultSugar.Infow(msg, keysAndValues...)
+}
+func Warnw(msg string, keysAndValues ...interface{}) {
+	defaultSugar.Warnw(msg, keysAndValues...)
+}
+func Errorw(msg string, keysAndValues ...interface{}) {
+	defaultSugar.Errorw(msg, keysAndValues...)
+}
+func Fatalw(msg string, keysAndValues ...interface{}) {
+	defaultSugar.Fatalw(msg, keysAndValues...)
+}
+
+// If will log the message if should log is true, eg:
+// defer log.If(errors.As(err, xxx)).Errorw("XXX", "err", err)
+func If(ok bool) logger {
+	if ok {
+		return &zapLogger{}
+	}
+	return &nopLogger{}
+}
+
 type logger interface {
 	Infow(msg string, keysAndValues ...interface{})
 	Warnw(msg string, keysAndValues ...interface{})
 	Errorw(msg string, keysAndValues ...interface{})
 	Fatalw(msg string, keysAndValues ...interface{})
+	If(bool) logger
 }
 
 type nopLogger struct{}
@@ -41,62 +66,25 @@ func (*nopLogger) Infow(msg string, keysAndValues ...interface{})  {}
 func (*nopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
 func (*nopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
 func (*nopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
+func (*nopLogger) If(bool) logger                                  { return &nopLogger{} }
 
-var (
-	errOnce  sync.Once
-	errSugar *zap.SugaredLogger
-	errInit  = func() {
-		errSugar = Logger().Sugar()
-	}
-)
+type zapLogger struct{}
 
-// NotNil will log the message if err not nil, eg:
-// defer log.NotNil(err).Wranw("XXX", "err", err)
-func NotNil(err error) logger {
-	errOnce.Do(errInit)
-
-	if err != nil {
-		return errSugar
-	}
-	return &nopLogger{}
-}
-
-// Check will log the message if should log is true, eg:
-// defer log.Check(errors.As(err, xxx)).Errorw("XXX", "err", err)
-func Check(shouldLog bool) logger {
-	errOnce.Do(errInit)
-
-	if shouldLog {
-		return errSugar
-	}
-	return &nopLogger{}
-}
-
-var (
-	defaultOnce  sync.Once
-	defaultSugar *zap.SugaredLogger
-	defaultInit  = func() {
-		defaultSugar = Logger(zap.AddCallerSkip(1)).Sugar()
-	}
-)
-
-func Infow(msg string, keysAndValues ...interface{}) {
-	defaultOnce.Do(defaultInit)
+func (*zapLogger) Infow(msg string, keysAndValues ...interface{}) {
 	defaultSugar.Infow(msg, keysAndValues...)
 }
-func Warnw(msg string, keysAndValues ...interface{}) {
-	defaultOnce.Do(defaultInit)
+func (*zapLogger) Warnw(msg string, keysAndValues ...interface{}) {
 	defaultSugar.Warnw(msg, keysAndValues...)
 }
-func Errorw(msg string, keysAndValues ...interface{}) {
-	defaultOnce.Do(defaultInit)
+func (*zapLogger) Errorw(msg string, keysAndValues ...interface{}) {
 	defaultSugar.Errorw(msg, keysAndValues...)
 }
-func Panicw(msg string, keysAndValues ...interface{}) {
-	defaultOnce.Do(defaultInit)
-	defaultSugar.Panicw(msg, keysAndValues...)
-}
-func Fatalw(msg string, keysAndValues ...interface{}) {
-	defaultOnce.Do(defaultInit)
+func (*zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
 	defaultSugar.Fatalw(msg, keysAndValues...)
+}
+func (*zapLogger) If(ok bool) logger {
+	if ok {
+		return &zapLogger{}
+	}
+	return &nopLogger{}
 }

@@ -7,8 +7,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var Cfg zap.Config
-var defaultSugar *zap.SugaredLogger
+var (
+	Cfg           zap.Config
+	defaultLogger Logger
+
+	Infow, Warnw, Errorw, Panicw, Fatalw func(msg string, keysAndValues ...interface{})
+	// If will log the message if should log is true, eg:
+	// defer log.If(err != nil).Errorw("XXX", "err", err)
+	If func(bool) Logger
+)
 
 func init() {
 	Cfg = zap.NewProductionConfig()
@@ -22,69 +29,65 @@ func init() {
 		enc.AppendString(caller.TrimmedPath())
 	}
 
-	defaultSugar = Logger(zap.AddCallerSkip(1)).Sugar()
+	SetDefaultLogger(&zapLogger{NewZapLogger(zap.AddCallerSkip(1)).Sugar()})
 }
 
-func Logger(opts ...zap.Option) *zap.Logger {
+func NewZapLogger(opts ...zap.Option) *zap.Logger {
 	logger, _ := Cfg.Build(opts...)
 	return logger
 }
 
-func Infow(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Infow(msg, keysAndValues...)
-}
-func Warnw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Warnw(msg, keysAndValues...)
-}
-func Errorw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Errorw(msg, keysAndValues...)
-}
-func Fatalw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Fatalw(msg, keysAndValues...)
+func SetDefaultLogger(logger Logger) {
+	defaultLogger = logger
+
+	Infow = defaultLogger.Infow
+	Warnw = defaultLogger.Warnw
+	Errorw = defaultLogger.Errorw
+	Panicw = defaultLogger.Panicw
+	Fatalw = defaultLogger.Fatalw
+	If = defaultLogger.If
 }
 
-// If will log the message if should log is true, eg:
-// defer log.If(errors.As(err, xxx)).Errorw("XXX", "err", err)
-func If(ok bool) logger {
-	if ok {
-		return &zapLogger{}
-	}
-	return &nopLogger{}
-}
-
-type logger interface {
+type Logger interface {
 	Infow(msg string, keysAndValues ...interface{})
 	Warnw(msg string, keysAndValues ...interface{})
 	Errorw(msg string, keysAndValues ...interface{})
+	Panicw(msg string, keysAndValues ...interface{})
 	Fatalw(msg string, keysAndValues ...interface{})
-	If(bool) logger
+	If(bool) Logger
 }
 
-type nopLogger struct{}
+type NopLogger struct{}
 
-func (*nopLogger) Infow(msg string, keysAndValues ...interface{})  {}
-func (*nopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
-func (*nopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
-func (*nopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
-func (*nopLogger) If(bool) logger                                  { return &nopLogger{} }
+func (*NopLogger) Infow(msg string, keysAndValues ...interface{})  {}
+func (*NopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
+func (*NopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
+func (*NopLogger) Panicw(msg string, keysAndValues ...interface{}) {}
+func (*NopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
+func (*NopLogger) If(bool) Logger                                  { return &NopLogger{} }
 
-type zapLogger struct{}
+type zapLogger struct {
+	*zap.SugaredLogger
+}
 
-func (*zapLogger) Infow(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Infow(msg, keysAndValues...)
+func (z *zapLogger) Infow(msg string, keysAndValues ...interface{}) {
+	z.SugaredLogger.Infow(msg, keysAndValues...)
 }
-func (*zapLogger) Warnw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Warnw(msg, keysAndValues...)
+func (z *zapLogger) Warnw(msg string, keysAndValues ...interface{}) {
+	z.SugaredLogger.Warnw(msg, keysAndValues...)
 }
-func (*zapLogger) Errorw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Errorw(msg, keysAndValues...)
+func (z *zapLogger) Errorw(msg string, keysAndValues ...interface{}) {
+	z.SugaredLogger.Errorw(msg, keysAndValues...)
 }
-func (*zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
-	defaultSugar.Fatalw(msg, keysAndValues...)
+func (z *zapLogger) Panicw(msg string, keysAndValues ...interface{}) {
+	z.SugaredLogger.Panicw(msg, keysAndValues...)
 }
-func (*zapLogger) If(ok bool) logger {
+func (z *zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
+	z.SugaredLogger.Fatalw(msg, keysAndValues...)
+}
+func (z *zapLogger) If(ok bool) Logger {
 	if ok {
-		return &zapLogger{}
+		return z
 	}
-	return &nopLogger{}
+	return &NopLogger{}
 }

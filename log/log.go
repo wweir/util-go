@@ -14,7 +14,8 @@ var (
 	Infow, Warnw, Errorw, Panicw, Fatalw func(msg string, keysAndValues ...interface{})
 	// If will log the message if should log is true, eg:
 	// defer log.If(err != nil).Errorw("XXX", "err", err)
-	If func(bool) Logger
+	If  func(bool) Logger
+	Run func(func()) Logger
 )
 
 func init() {
@@ -46,6 +47,7 @@ func SetDefaultLogger(logger Logger) {
 	Panicw = defaultLogger.Panicw
 	Fatalw = defaultLogger.Fatalw
 	If = defaultLogger.If
+	Run = defaultLogger.Run
 }
 
 type Logger interface {
@@ -55,6 +57,7 @@ type Logger interface {
 	Panicw(msg string, keysAndValues ...interface{})
 	Fatalw(msg string, keysAndValues ...interface{})
 	If(bool) Logger
+	Run(func()) Logger
 }
 
 type NopLogger struct{}
@@ -65,6 +68,7 @@ func (*NopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
 func (*NopLogger) Panicw(msg string, keysAndValues ...interface{}) {}
 func (*NopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
 func (*NopLogger) If(bool) Logger                                  { return &NopLogger{} }
+func (*NopLogger) Run(func()) Logger                               { return &NopLogger{} }
 
 type zapLogger struct {
 	*zap.SugaredLogger
@@ -90,4 +94,8 @@ func (z *zapLogger) If(ok bool) Logger {
 		return z
 	}
 	return &NopLogger{}
+}
+func (z *zapLogger) Run(fn func()) Logger {
+	fn()
+	return z
 }

@@ -17,4 +17,5 @@ func Example_If() {
 	log.Infow("log", "a", a, "err", err)
 	a = 2
 	log.If(err != nil).Errorw("log if", "a", a, "err", err)
+	log.If(err != nil).Run(func() { a = 3 })
 }

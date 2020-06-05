@@ -1,21 +1,23 @@
 package log_test
 
 import (
-	"errors"
-	"fmt"
+	"io"
 
 	"github.com/wweir/util-go/log"
 )
 
 func Example_If() {
-	a := 1
-	err := errors.New("error")
+	var a = 1
+	var err error
 
-	fmt.Println(log.If == nil)
-	defer log.If(err != nil).Errorw("log defer if", "a", &a, "err", err)
+	defer log.NotNil(&err).Warnw("log defer NotNil", "a", &a)
 
 	log.Infow("log", "a", a, "err", err)
+	log.NotNil(&err).Warnw("log NotNil", "a", a)
+
 	a = 2
-	log.If(err != nil).Errorw("log if", "a", a, "err", err)
-	log.If(err != nil).Run(func() { a = 3 })
+	err = io.EOF
+
+	log.NotNil(&err).Warnw("log NotNil", "a", a)
+	//Output:
 }

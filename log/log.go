@@ -8,14 +8,8 @@ import (
 )
 
 var (
-	Cfg           zap.Config
-	defaultLogger Logger
-
-	Infow, Warnw, Errorw, Panicw, Fatalw func(msg string, keysAndValues ...interface{})
-	// If will log the message if should log is true, eg:
-	// defer log.If(err != nil).Errorw("XXX", "err", err)
-	If  func(bool) Logger
-	Run func(func()) Logger
+	Cfg   zap.Config
+	Sugar *zap.SugaredLogger
 )
 
 func init() {
@@ -30,7 +24,7 @@ func init() {
 		enc.AppendString(caller.TrimmedPath())
 	}
 
-	SetDefaultLogger(&zapLogger{NewZapLogger(zap.AddCallerSkip(1)).Sugar()})
+	SetZapSugar(NewZapLogger(zap.AddCallerSkip(1)))
 }
 
 func NewZapLogger(opts ...zap.Option) *zap.Logger {
@@ -38,64 +32,64 @@ func NewZapLogger(opts ...zap.Option) *zap.Logger {
 	return logger
 }
 
-func SetDefaultLogger(logger Logger) {
-	defaultLogger = logger
+// Handy log functions
+var Infow, Warnw, Errorw, Panicw, Fatalw func(msg string, keysAndValues ...interface{})
 
+func SetZapSugar(logger *zap.Logger) {
+	Sugar = logger.Sugar()
+
+	var defaultLogger *zapLogger
 	Infow = defaultLogger.Infow
 	Warnw = defaultLogger.Warnw
 	Errorw = defaultLogger.Errorw
 	Panicw = defaultLogger.Panicw
 	Fatalw = defaultLogger.Fatalw
-	If = defaultLogger.If
-	Run = defaultLogger.Run
 }
 
-type Logger interface {
-	Infow(msg string, keysAndValues ...interface{})
-	Warnw(msg string, keysAndValues ...interface{})
-	Errorw(msg string, keysAndValues ...interface{})
-	Panicw(msg string, keysAndValues ...interface{})
-	Fatalw(msg string, keysAndValues ...interface{})
-	If(bool) Logger
-	Run(func()) Logger
+// NotNil will log the message if err != nil , eg:
+// defer log.NotNil(err).Errorw("XXX", "err", err)
+func NotNil(err *error) *zapLogger {
+	return &zapLogger{
+		err: err,
+	}
 }
-
-type NopLogger struct{}
-
-func (*NopLogger) Infow(msg string, keysAndValues ...interface{})  {}
-func (*NopLogger) Warnw(msg string, keysAndValues ...interface{})  {}
-func (*NopLogger) Errorw(msg string, keysAndValues ...interface{}) {}
-func (*NopLogger) Panicw(msg string, keysAndValues ...interface{}) {}
-func (*NopLogger) Fatalw(msg string, keysAndValues ...interface{}) {}
-func (*NopLogger) If(bool) Logger                                  { return &NopLogger{} }
-func (*NopLogger) Run(func()) Logger                               { return &NopLogger{} }
 
 type zapLogger struct {
-	*zap.SugaredLogger
+	err *error
 }
 
 func (z *zapLogger) Infow(msg string, keysAndValues ...interface{}) {
-	z.SugaredLogger.Infow(msg, keysAndValues...)
+	if z == nil {
+		Sugar.Infow(msg, keysAndValues...)
+	} else if *z.err != nil {
+		Sugar.With("err", *z.err).Infow(msg, keysAndValues...)
+	}
 }
 func (z *zapLogger) Warnw(msg string, keysAndValues ...interface{}) {
-	z.SugaredLogger.Warnw(msg, keysAndValues...)
+	if z == nil {
+		Sugar.Warnw(msg, keysAndValues...)
+	} else if *z.err != nil {
+		Sugar.With("err", *z.err).Warnw(msg, keysAndValues...)
+	}
 }
 func (z *zapLogger) Errorw(msg string, keysAndValues ...interface{}) {
-	z.SugaredLogger.Errorw(msg, keysAndValues...)
+	if z == nil {
+		Sugar.Errorw(msg, keysAndValues...)
+	} else if *z.err != nil {
+		Sugar.With("err", *z.err).Errorw(msg, keysAndValues...)
+	}
 }
 func (z *zapLogger) Panicw(msg string, keysAndValues ...interface{}) {
-	z.SugaredLogger.Panicw(msg, keysAndValues...)
+	if z == nil {
+		Sugar.Panicw(msg, keysAndValues...)
+	} else if *z.err != nil {
+		Sugar.With("err", *z.err).Panicw(msg, keysAndValues...)
+	}
 }
 func (z *zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
-	z.SugaredLogger.Fatalw(msg, keysAndValues...)
-}
-func (z *zapLogger) If(ok bool) Logger {
-	if ok {
-		return z
+	if z == nil {
+		Sugar.Fatalw(msg, keysAndValues...)
+	} else if *z.err != nil {
+		Sugar.With("err", *z.err).Fatalw(msg, keysAndValues...)
 	}
-	return &NopLogger{}
-}
-func (z *zapLogger) Run(fn func()) Logger {
-	fn()
-	return z
 }

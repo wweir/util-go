@@ -9,7 +9,7 @@ import (
 
 var (
 	Cfg   zap.Config
-	Sugar *zap.SugaredLogger
+	sugar *zap.SugaredLogger
 )
 
 func init() {
@@ -35,8 +35,10 @@ func NewZapLogger(opts ...zap.Option) *zap.Logger {
 // Handy log functions
 var Infow, Warnw, Errorw, Panicw, Fatalw func(msg string, keysAndValues ...interface{})
 
+// SetZapSugar set a custom logger to be the default logger
+// the logger should init with option: zap.AddCallerSkip(1)
 func SetZapSugar(logger *zap.Logger) {
-	Sugar = logger.Sugar()
+	sugar = logger.Sugar()
 
 	var defaultLogger *zapLogger
 	Infow = defaultLogger.Infow
@@ -60,36 +62,36 @@ type zapLogger struct {
 
 func (z *zapLogger) Infow(msg string, keysAndValues ...interface{}) {
 	if z == nil {
-		Sugar.Infow(msg, keysAndValues...)
+		sugar.Infow(msg, keysAndValues...)
 	} else if *z.err != nil {
-		Sugar.With("err", *z.err).Infow(msg, keysAndValues...)
+		sugar.With("err", *z.err).Infow(msg, keysAndValues...)
 	}
 }
 func (z *zapLogger) Warnw(msg string, keysAndValues ...interface{}) {
 	if z == nil {
-		Sugar.Warnw(msg, keysAndValues...)
+		sugar.Warnw(msg, keysAndValues...)
 	} else if *z.err != nil {
-		Sugar.With("err", *z.err).Warnw(msg, keysAndValues...)
+		sugar.With("err", *z.err).Warnw(msg, keysAndValues...)
 	}
 }
 func (z *zapLogger) Errorw(msg string, keysAndValues ...interface{}) {
 	if z == nil {
-		Sugar.Errorw(msg, keysAndValues...)
+		sugar.Errorw(msg, keysAndValues...)
 	} else if *z.err != nil {
-		Sugar.With("err", *z.err).Errorw(msg, keysAndValues...)
+		sugar.With("err", *z.err).Errorw(msg, keysAndValues...)
 	}
 }
 func (z *zapLogger) Panicw(msg string, keysAndValues ...interface{}) {
 	if z == nil {
-		Sugar.Panicw(msg, keysAndValues...)
+		sugar.Panicw(msg, keysAndValues...)
 	} else if *z.err != nil {
-		Sugar.With("err", *z.err).Panicw(msg, keysAndValues...)
+		sugar.With("err", *z.err).Panicw(msg, keysAndValues...)
 	}
 }
 func (z *zapLogger) Fatalw(msg string, keysAndValues ...interface{}) {
 	if z == nil {
-		Sugar.Fatalw(msg, keysAndValues...)
+		sugar.Fatalw(msg, keysAndValues...)
 	} else if *z.err != nil {
-		Sugar.With("err", *z.err).Fatalw(msg, keysAndValues...)
+		sugar.With("err", *z.err).Fatalw(msg, keysAndValues...)
 	}
 }

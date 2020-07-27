@@ -48,9 +48,17 @@ func SetZapSugar(logger *zap.Logger) {
 	Fatalw = defaultLogger.Fatalw
 }
 
-// NotNil will log the message if err != nil , eg:
-// defer log.NotNil(err).Errorw("XXX", "err", err)
-func NotNil(err *error) *zapLogger {
+// Err will log the message if err != nil , eg:
+// log.Err(err).Errorw("XXX", "err", err)
+func Err(err error) *zapLogger {
+	return &zapLogger{
+		err: &err,
+	}
+}
+
+// ErrPt will log the message if err != nil , eg:
+// defer log.ErrPt(err).Errorw("XXX", "err", err)
+func ErrPt(err *error) *zapLogger {
 	return &zapLogger{
 		err: err,
 	}
